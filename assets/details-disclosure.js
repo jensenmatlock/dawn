@@ -4,29 +4,31 @@ class DetailsDisclosure extends HTMLElement {
     this.mainDetailsToggle = this.querySelector('details');
     this.content = this.mainDetailsToggle.querySelector('summary').nextElementSibling;
 
-    this.mainDetailsToggle.addEventListener('focusout', this.onFocusOut.bind(this));
-    this.mainDetailsToggle.addEventListener('toggle', this.onToggle.bind(this));
+    // Use arrow functions to preserve 'this' context
+    this.mainDetailsToggle.addEventListener('focusout', () => this.onFocusOut());
+    this.mainDetailsToggle.addEventListener('toggle', () => this.onToggle());
   }
 
   onFocusOut() {
-    setTimeout(() => {
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
       if (!this.contains(document.activeElement)) this.close();
     });
   }
 
   onToggle() {
-    if (!this.animations) this.animations = this.content.getAnimations();
-
-    if (this.mainDetailsToggle.hasAttribute('open')) {
-      this.animations.forEach((animation) => animation.play());
-    } else {
-      this.animations.forEach((animation) => animation.cancel());
+    // Lazy initialization of animations
+    if (!this.animations) {
+      this.animations = this.content.getAnimations();
     }
+
+    const method = this.mainDetailsToggle.open ? 'play' : 'cancel';
+    this.animations.forEach(animation => animation[method]());
   }
 
   close() {
-    this.mainDetailsToggle.removeAttribute('open');
-    this.mainDetailsToggle.querySelector('summary').setAttribute('aria-expanded', false);
+    this.mainDetailsToggle.open = false;
+    this.mainDetailsToggle.querySelector('summary').setAttribute('aria-expanded', 'false');
   }
 }
 
@@ -43,10 +45,14 @@ class HeaderMenu extends DetailsDisclosure {
     this.header.preventHide = this.mainDetailsToggle.open;
 
     if (document.documentElement.style.getPropertyValue('--header-bottom-position-desktop') !== '') return;
-    document.documentElement.style.setProperty(
-      '--header-bottom-position-desktop',
-      `${Math.floor(this.header.getBoundingClientRect().bottom)}px`
-    );
+    
+    // Use requestAnimationFrame for layout calculations
+    requestAnimationFrame(() => {
+      document.documentElement.style.setProperty(
+        '--header-bottom-position-desktop',
+        `${Math.floor(this.header.getBoundingClientRect().bottom)}px`
+      );
+    });
   }
 }
 

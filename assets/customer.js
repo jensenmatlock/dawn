@@ -26,7 +26,7 @@ class CustomerAddresses {
       ? {
           container,
           addressContainer: container.querySelector(selectors.addressContainer),
-          toggleButtons: document.querySelectorAll(selectors.toggleAddressButton),
+          toggleButtons: container.querySelectorAll(selectors.toggleAddressButton),
           cancelButtons: container.querySelectorAll(selectors.cancelAddressButton),
           deleteButtons: container.querySelectorAll(selectors.deleteAddressButton),
           countrySelects: container.querySelectorAll(selectors.addressCountrySelect),
@@ -35,35 +35,40 @@ class CustomerAddresses {
   }
 
   _setupCountries() {
-    if (Shopify && Shopify.CountryProvinceSelector) {
-      // eslint-disable-next-line no-new
-      new Shopify.CountryProvinceSelector('AddressCountryNew', 'AddressProvinceNew', {
-        hideElement: 'AddressProvinceContainerNew',
+    if (typeof Shopify === 'undefined' || !Shopify.CountryProvinceSelector) return;
+
+    // Use destructuring for better readability
+    const { countrySelects } = this.elements;
+
+    new Shopify.CountryProvinceSelector('AddressCountryNew', 'AddressProvinceNew', {
+      hideElement: 'AddressProvinceContainerNew',
+    });
+
+    countrySelects.forEach((select) => {
+      const { formId } = select.dataset;
+      new Shopify.CountryProvinceSelector(`AddressCountry_${formId}`, `AddressProvince_${formId}`, {
+        hideElement: `AddressProvinceContainer_${formId}`,
       });
-      this.elements.countrySelects.forEach((select) => {
-        const formId = select.dataset.formId;
-        // eslint-disable-next-line no-new
-        new Shopify.CountryProvinceSelector(`AddressCountry_${formId}`, `AddressProvince_${formId}`, {
-          hideElement: `AddressProvinceContainer_${formId}`,
-        });
-      });
-    }
+    });
   }
 
   _setupEventListeners() {
-    this.elements.toggleButtons.forEach((element) => {
+    const { toggleButtons, cancelButtons, deleteButtons } = this.elements;
+
+    toggleButtons.forEach((element) => {
       element.addEventListener('click', this._handleAddEditButtonClick);
     });
-    this.elements.cancelButtons.forEach((element) => {
+    cancelButtons.forEach((element) => {
       element.addEventListener('click', this._handleCancelButtonClick);
     });
-    this.elements.deleteButtons.forEach((element) => {
+    deleteButtons.forEach((element) => {
       element.addEventListener('click', this._handleDeleteButtonClick);
     });
   }
 
   _toggleExpanded(target) {
-    target.setAttribute(attributes.expanded, (target.getAttribute(attributes.expanded) === 'false').toString());
+    const newState = target.getAttribute(attributes.expanded) === 'false';
+    target.setAttribute(attributes.expanded, newState.toString());
   }
 
   _handleAddEditButtonClick = ({ currentTarget }) => {
@@ -71,12 +76,13 @@ class CustomerAddresses {
   };
 
   _handleCancelButtonClick = ({ currentTarget }) => {
-    this._toggleExpanded(currentTarget.closest(selectors.addressContainer).querySelector(`[${attributes.expanded}]`));
+    const expandedElement = currentTarget.closest(selectors.addressContainer).querySelector(`[${attributes.expanded}]`);
+    this._toggleExpanded(expandedElement);
   };
 
   _handleDeleteButtonClick = ({ currentTarget }) => {
-    // eslint-disable-next-line no-alert
-    if (confirm(currentTarget.getAttribute(attributes.confirmMessage))) {
+    const confirmMessage = currentTarget.getAttribute(attributes.confirmMessage);
+    if (window.confirm(confirmMessage)) {
       Shopify.postLink(currentTarget.dataset.target, {
         parameters: { _method: 'delete' },
       });

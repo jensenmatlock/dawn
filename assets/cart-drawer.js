@@ -2,8 +2,9 @@ class CartDrawer extends HTMLElement {
   constructor() {
     super();
 
+    // Use arrow functions for event listeners to maintain 'this' context
     this.addEventListener('keyup', (evt) => evt.code === 'Escape' && this.close());
-    this.querySelector('#CartDrawer-Overlay').addEventListener('click', this.close.bind(this));
+    this.querySelector('#CartDrawer-Overlay').addEventListener('click', () => this.close());
     this.setHeaderCartIconAccessibility();
   }
 
@@ -13,38 +14,36 @@ class CartDrawer extends HTMLElement {
 
     cartLink.setAttribute('role', 'button');
     cartLink.setAttribute('aria-haspopup', 'dialog');
-    cartLink.addEventListener('click', (event) => {
-      event.preventDefault();
-      this.open(cartLink);
-    });
-    cartLink.addEventListener('keydown', (event) => {
-      if (event.code.toUpperCase() === 'SPACE') {
+    
+    // Combine click and keydown event listeners
+    const openHandler = (event) => {
+      if (event.type === 'click' || (event.type === 'keydown' && event.code.toUpperCase() === 'SPACE')) {
         event.preventDefault();
         this.open(cartLink);
       }
-    });
+    };
+    
+    cartLink.addEventListener('click', openHandler);
+    cartLink.addEventListener('keydown', openHandler);
   }
 
   open(triggeredBy) {
     if (triggeredBy) this.setActiveElement(triggeredBy);
     const cartDrawerNote = this.querySelector('[id^="Details-"] summary');
     if (cartDrawerNote && !cartDrawerNote.hasAttribute('role')) this.setSummaryAccessibility(cartDrawerNote);
-    // here the animation doesn't seem to always get triggered. A timeout seem to help
-    setTimeout(() => {
+    
+    // Use requestAnimationFrame instead of setTimeout for better performance
+    requestAnimationFrame(() => {
       this.classList.add('animate', 'active');
     });
 
-    this.addEventListener(
-      'transitionend',
-      () => {
-        const containerToTrapFocusOn = this.classList.contains('is-empty')
-          ? this.querySelector('.drawer__inner-empty')
-          : document.getElementById('CartDrawer');
-        const focusElement = this.querySelector('.drawer__inner') || this.querySelector('.drawer__close');
-        trapFocus(containerToTrapFocusOn, focusElement);
-      },
-      { once: true }
-    );
+    this.addEventListener('transitionend', () => {
+      const containerToTrapFocusOn = this.classList.contains('is-empty')
+        ? this.querySelector('.drawer__inner-empty')
+        : document.getElementById('CartDrawer');
+      const focusElement = this.querySelector('.drawer__inner') || this.querySelector('.drawer__close');
+      trapFocus(containerToTrapFocusOn, focusElement);
+    }, { once: true });
 
     document.body.classList.add('overflow-hidden');
   }
@@ -71,20 +70,25 @@ class CartDrawer extends HTMLElement {
   }
 
   renderContents(parsedState) {
-    this.querySelector('.drawer__inner').classList.contains('is-empty') &&
-      this.querySelector('.drawer__inner').classList.remove('is-empty');
+    const drawerInner = this.querySelector('.drawer__inner');
+    if (drawerInner.classList.contains('is-empty')) {
+      drawerInner.classList.remove('is-empty');
+    }
+    
     this.productId = parsedState.id;
     this.getSectionsToRender().forEach((section) => {
       const sectionElement = section.selector
         ? document.querySelector(section.selector)
         : document.getElementById(section.id);
 
-      if (!sectionElement) return;
-      sectionElement.innerHTML = this.getSectionInnerHTML(parsedState.sections[section.id], section.selector);
+      if (sectionElement) {
+        sectionElement.innerHTML = this.getSectionInnerHTML(parsedState.sections[section.id], section.selector);
+      }
     });
 
-    setTimeout(() => {
-      this.querySelector('#CartDrawer-Overlay').addEventListener('click', this.close.bind(this));
+    // Use requestAnimationFrame instead of setTimeout
+    requestAnimationFrame(() => {
+      this.querySelector('#CartDrawer-Overlay').addEventListener('click', () => this.close());
       this.open();
     });
   }

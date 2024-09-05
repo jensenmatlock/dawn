@@ -3,10 +3,14 @@ class DetailsModal extends HTMLElement {
     super();
     this.detailsContainer = this.querySelector('details');
     this.summaryToggle = this.querySelector('summary');
+    this.closeButton = this.querySelector('button[type="button"]');
 
-    this.detailsContainer.addEventListener('keyup', (event) => event.code.toUpperCase() === 'ESCAPE' && this.close());
+    // Use arrow functions to maintain 'this' context
+    this.detailsContainer.addEventListener('keyup', (event) => {
+      if (event.code.toUpperCase() === 'ESCAPE') this.close();
+    });
     this.summaryToggle.addEventListener('click', this.onSummaryClick.bind(this));
-    this.querySelector('button[type="button"]').addEventListener('click', this.close.bind(this));
+    this.closeButton.addEventListener('click', () => this.close());
 
     this.summaryToggle.setAttribute('role', 'button');
   }
@@ -17,17 +21,18 @@ class DetailsModal extends HTMLElement {
 
   onSummaryClick(event) {
     event.preventDefault();
-    event.target.closest('details').hasAttribute('open') ? this.close() : this.open(event);
+    this.isOpen() ? this.close() : this.open(event);
   }
 
-  onBodyClick(event) {
-    if (!this.contains(event.target) || event.target.classList.contains('modal-overlay')) this.close(false);
+  onBodyClick = (event) => {
+    if (!this.contains(event.target) || event.target.classList.contains('modal-overlay')) {
+      this.close(false);
+    }
   }
 
   open(event) {
-    this.onBodyClickEvent = this.onBodyClickEvent || this.onBodyClick.bind(this);
-    event.target.closest('details').setAttribute('open', true);
-    document.body.addEventListener('click', this.onBodyClickEvent);
+    this.detailsContainer.setAttribute('open', true);
+    document.body.addEventListener('click', this.onBodyClick);
     document.body.classList.add('overflow-hidden');
 
     trapFocus(
@@ -39,7 +44,7 @@ class DetailsModal extends HTMLElement {
   close(focusToggle = true) {
     removeTrapFocus(focusToggle ? this.summaryToggle : null);
     this.detailsContainer.removeAttribute('open');
-    document.body.removeEventListener('click', this.onBodyClickEvent);
+    document.body.removeEventListener('click', this.onBodyClick);
     document.body.classList.remove('overflow-hidden');
   }
 }

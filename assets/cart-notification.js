@@ -2,14 +2,23 @@ class CartNotification extends HTMLElement {
   constructor() {
     super();
 
-    this.notification = document.getElementById('cart-notification');
+    // Use querySelector instead of getElementById for consistency
+    this.notification = document.querySelector('#cart-notification');
     this.header = document.querySelector('sticky-header');
-    this.onBodyClick = this.handleBodyClick.bind(this);
+    
+    // Bind methods in the constructor
+    this.open = this.open.bind(this);
+    this.close = this.close.bind(this);
+    this.handleBodyClick = this.handleBodyClick.bind(this);
 
     this.notification.addEventListener('keyup', (evt) => evt.code === 'Escape' && this.close());
-    this.querySelectorAll('button[type="button"]').forEach((closeButton) =>
-      closeButton.addEventListener('click', this.close.bind(this))
-    );
+    
+    // Use event delegation for close buttons
+    this.notification.addEventListener('click', (evt) => {
+      if (evt.target.matches('button[type="button"]')) {
+        this.close();
+      }
+    });
   }
 
   open() {
@@ -24,12 +33,12 @@ class CartNotification extends HTMLElement {
       { once: true }
     );
 
-    document.body.addEventListener('click', this.onBodyClick);
+    document.body.addEventListener('click', this.handleBodyClick);
   }
 
   close() {
     this.notification.classList.remove('active');
-    document.body.removeEventListener('click', this.onBodyClick);
+    document.body.removeEventListener('click', this.handleBodyClick);
 
     removeTrapFocus(this.activeElement);
   }
@@ -37,10 +46,13 @@ class CartNotification extends HTMLElement {
   renderContents(parsedState) {
     this.cartItemKey = parsedState.key;
     this.getSectionsToRender().forEach((section) => {
-      document.getElementById(section.id).innerHTML = this.getSectionInnerHTML(
-        parsedState.sections[section.id],
-        section.selector
-      );
+      const element = document.getElementById(section.id);
+      if (element) {
+        element.innerHTML = this.getSectionInnerHTML(
+          parsedState.sections[section.id],
+          section.selector
+        );
+      }
     });
 
     if (this.header) this.header.reveal();
@@ -63,12 +75,15 @@ class CartNotification extends HTMLElement {
   }
 
   getSectionInnerHTML(html, selector = '.shopify-section') {
-    return new DOMParser().parseFromString(html, 'text/html').querySelector(selector).innerHTML;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const section = doc.querySelector(selector);
+    return section ? section.innerHTML : '';
   }
 
   handleBodyClick(evt) {
     const target = evt.target;
-    if (target !== this.notification && !target.closest('cart-notification')) {
+    if (!this.notification.contains(target)) {
       const disclosure = target.closest('details-disclosure, header-menu');
       this.activeElement = disclosure ? disclosure.querySelector('summary') : null;
       this.close();
